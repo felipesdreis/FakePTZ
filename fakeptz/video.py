@@ -95,7 +95,7 @@ class VideoPipeline:
         try:
             with camera:
                 while self._running:
-                    ok, raw_frame = capture.read()
+                    ok, raw_frame = await asyncio.to_thread(capture.read)
                     if not ok:
                         self.status = "ERRO"
                         on_error("Falha ao ler frame do dispositivo de captura.")
@@ -103,8 +103,8 @@ class VideoPipeline:
 
                     output_frame = self.process_frame(raw_frame)
                     output_frame_rgb = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
-                    camera.send(output_frame_rgb)
-                    camera.sleep_until_next_frame()
+                    await asyncio.to_thread(camera.send, output_frame_rgb)
+                    await asyncio.to_thread(camera.sleep_until_next_frame)
 
                     frame_count += 1
                     elapsed = time.monotonic() - fps_window_start
@@ -112,8 +112,6 @@ class VideoPipeline:
                         self.current_fps = frame_count / elapsed
                         frame_count = 0
                         fps_window_start = time.monotonic()
-
-                    await asyncio.sleep(0)
         finally:
             capture.release()
             self._running = False
