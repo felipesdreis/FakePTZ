@@ -1,8 +1,11 @@
+from typing import Optional
+
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Button, Footer, Header, Static
 
 from fakeptz.config import CropMode
+from fakeptz.video import VideoPipeline
 
 MODE_LABELS = {
     CropMode.ESQUERDA: "1 - ESQUERDA",
@@ -77,10 +80,11 @@ class CropperApp(App):
         ("q", "quit", "Sair"),
     ]
 
-    def __init__(self):
+    def __init__(self, pipeline: Optional[VideoPipeline] = None):
         super().__init__()
         self.title = "CROPPER VIRTUAL TUI"
-        self.active_mode = CropMode.CENTRO
+        self.pipeline = pipeline or VideoPipeline()
+        self.active_mode = self.pipeline.mode
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -97,9 +101,12 @@ class CropperApp(App):
     def on_mount(self) -> None:
         self._refresh_active_button()
         self._refresh_status_panel()
+        self.run_worker(self.pipeline.run(self._handle_pipeline_error), exclusive=True)
+        self.set_interval(0.5, self._refresh_status_panel)
 
     def action_set_mode(self, mode_value: str) -> None:
         self.active_mode = CropMode(mode_value)
+        self.pipeline.set_mode(self.active_mode)
         self._refresh_active_button()
         self._refresh_status_panel()
 
@@ -109,6 +116,9 @@ class CropperApp(App):
                 self.action_set_mode(mode.value)
                 break
 
+    def _handle_pipeline_error(self, message: str) -> None:
+        self.exit(message=f"[ERRO] {message}")
+
     def _refresh_active_button(self) -> None:
         for mode, button_id in MODE_BUTTON_IDS.items():
             button = self.query_one(f"#{button_id}", Button)
@@ -116,7 +126,11 @@ class CropperApp(App):
 
     def _refresh_status_panel(self) -> None:
         status_panel = self.query_one("#status-panel", Static)
+        # Gold é reservado para o estado "ONLINE" (momento cerimonial, per
+        # DESIGN-starbucks.md); erro usa o vermelho semântico do doc.
+        status_color = "#cba258" if self.pipeline.status == "ONLINE" else "#c82014"
         status_panel.update(
-            f"STATUS: [bold #cba258]TRANSMITINDO[/] | "
+            f"STATUS: [bold {status_color}]{self.pipeline.status}[/] "
+            f"({self.pipeline.current_fps:.0f} FPS) | "
             f"MODO ATIVO: [bold #006241]{self.active_mode.value}[/]"
         )
