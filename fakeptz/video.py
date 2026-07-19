@@ -11,3 +11,33 @@ def crop_frame(frame: np.ndarray, mode) -> np.ndarray:
 
 def resize_frame(frame: np.ndarray) -> np.ndarray:
     return cv2.resize(frame, (OUTPUT_WIDTH, OUTPUT_HEIGHT), interpolation=cv2.INTER_LINEAR)
+
+
+class CaptureError(Exception):
+    pass
+
+
+def open_capture(camera_index: int, width: int, height: int, fps: int) -> cv2.VideoCapture:
+    capture = cv2.VideoCapture(camera_index)
+    if not capture.isOpened():
+        raise CaptureError(
+            f"Não foi possível abrir o dispositivo de captura {camera_index}."
+        )
+
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    capture.set(cv2.CAP_PROP_FPS, fps)
+
+    actual_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    actual_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    actual_fps = capture.get(cv2.CAP_PROP_FPS)
+
+    # ponytail: tolerância de 1fps porque webcams raramente reportam o fps exato solicitado
+    if actual_width != width or actual_height != height or abs(actual_fps - fps) > 1:
+        capture.release()
+        raise CaptureError(
+            f"Dispositivo não suporta {width}x{height}@{fps}fps "
+            f"(retornou {actual_width}x{actual_height}@{actual_fps:.0f}fps)."
+        )
+
+    return capture
