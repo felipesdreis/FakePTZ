@@ -1,0 +1,21 @@
+from enum import Enum
+
+
+class CropMode(str, Enum):
+    ESQUERDA = "ESQUERDA"
+    CENTRO = "CENTRO"
+    DIREITA = "DIREITA"
+
+
+CAPTURE_WIDTH = 1920
+CAPTURE_HEIGHT = 1080
+CAPTURE_FPS = 30
+
+OUTPUT_WIDTH = 854
+OUTPUT_HEIGHT = 480
+
+CROP_COORDS = {
+    CropMode.ESQUERDA: (180, 900, 0, 1280),
+    CropMode.CENTRO: (180, 900, 320, 1600),
+    CropMode.DIREITA: (180, 900, 640, 1920),
+}
