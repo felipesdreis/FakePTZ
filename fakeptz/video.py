@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from fakeptz.config import CROP_COORDS, OUTPUT_HEIGHT, OUTPUT_WIDTH
+from fakeptz.config import CROP_COORDS, OUTPUT_HEIGHT, OUTPUT_WIDTH, CropMode
 
 
 def crop_frame(frame: np.ndarray, mode) -> np.ndarray:
@@ -41,3 +41,19 @@ def open_capture(camera_index: int, width: int, height: int, fps: int) -> cv2.Vi
         )
 
     return capture
+
+
+class VideoPipeline:
+    def __init__(self, camera_index: int = 0):
+        self.camera_index = camera_index
+        self.mode = CropMode.CENTRO
+        self.status = "OFFLINE"
+        self.current_fps = 0.0
+        self._running = False
+
+    def set_mode(self, mode: CropMode) -> None:
+        self.mode = mode
+
+    def process_frame(self, raw_frame: np.ndarray) -> np.ndarray:
+        cropped = crop_frame(raw_frame, self.mode)
+        return resize_frame(cropped)
