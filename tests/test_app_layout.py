@@ -9,11 +9,24 @@ class FakePipeline:
         self.mode = CropMode.CENTRO
         self.status = "ONLINE"
         self.current_fps = 30.0
+        self.zoom, self.pan, self.tilt = 1.0, 0.5, 0.5
         self.set_mode_calls = []
+        self.nudge_pan_calls = []
+        self.nudge_tilt_calls = []
+        self.nudge_zoom_calls = []
 
     def set_mode(self, mode):
         self.mode = mode
         self.set_mode_calls.append(mode)
+
+    def nudge_pan(self, direction):
+        self.nudge_pan_calls.append(direction)
+
+    def nudge_tilt(self, direction):
+        self.nudge_tilt_calls.append(direction)
+
+    def nudge_zoom(self, direction):
+        self.nudge_zoom_calls.append(direction)
 
     async def run(self, on_error):
         return None

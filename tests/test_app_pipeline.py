@@ -11,11 +11,24 @@ class FakePipeline:
         self.mode = CropMode.CENTRO
         self.status = "ONLINE"
         self.current_fps = 30.0
+        self.zoom, self.pan, self.tilt = 1.0, 0.5, 0.5
         self.set_mode_calls = []
+        self.nudge_pan_calls = []
+        self.nudge_tilt_calls = []
+        self.nudge_zoom_calls = []
 
     def set_mode(self, mode):
         self.mode = mode
         self.set_mode_calls.append(mode)
+
+    def nudge_pan(self, direction):
+        self.nudge_pan_calls.append(direction)
+
+    def nudge_tilt(self, direction):
+        self.nudge_tilt_calls.append(direction)
+
+    def nudge_zoom(self, direction):
+        self.nudge_zoom_calls.append(direction)
 
     async def run(self, on_error):
         return None
@@ -39,6 +52,17 @@ async def test_status_panel_shows_pipeline_telemetry():
         rendered = str(status_panel.content)
         assert "ONLINE" in rendered
         assert "30 FPS" in rendered
+
+
+@pytest.mark.asyncio
+async def test_status_panel_shows_zoom_pan_tilt():
+    pipeline = FakePipeline()
+    app = CropperApp(pipeline=pipeline)
+    async with app.run_test():
+        status_panel = app.query_one("#status-panel")
+        rendered = str(status_panel.content)
+        assert "1.0x" in rendered
+        assert "50%" in rendered
 
 
 @pytest.mark.asyncio

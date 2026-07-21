@@ -36,11 +36,20 @@ def test_open_capture_device_not_opened(mock_video_capture):
 
 
 @patch("fakeptz.video.cv2.VideoCapture")
-def test_open_capture_unsupported_resolution(mock_video_capture):
-    mock_video_capture.return_value = _mock_capture(width=1280, height=720)
+def test_open_capture_zero_resolution(mock_video_capture):
+    mock_video_capture.return_value = _mock_capture(width=0, height=0)
 
     with pytest.raises(CaptureError):
         open_capture(0, 1920, 1080, 30)
+
+
+@patch("fakeptz.video.cv2.VideoCapture")
+def test_open_capture_accepts_any_nonzero_resolution(mock_video_capture):
+    mock_video_capture.return_value = _mock_capture(width=1280, height=720)
+
+    capture = open_capture(0, 1920, 1080, 30)
+
+    assert capture is mock_video_capture.return_value
 
 
 @patch("fakeptz.video.cv2.VideoCapture")

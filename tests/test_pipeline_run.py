@@ -6,9 +6,9 @@ import numpy as np
 from fakeptz.video import CaptureError, VideoPipeline
 
 
-def _mock_capture_with_frames(frame_count):
+def _mock_capture_with_frames(frame_count, frame_shape=(1080, 1920, 3)):
     capture = MagicMock()
-    frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+    frame = np.zeros(frame_shape, dtype=np.uint8)
     capture.read.side_effect = [(True, frame)] * frame_count + [(False, None)]
     return capture
 
@@ -42,6 +42,23 @@ def test_run_reports_capture_error(mock_open_capture):
 
     assert pipeline.status == "ERRO"
     assert errors == ["Não foi possível abrir o dispositivo de captura 0."]
+
+
+@patch("fakeptz.video.pyvirtualcam.Camera")
+@patch("fakeptz.video.open_capture")
+def test_run_processes_720p_frames(mock_open_capture, mock_camera_cls):
+    capture = _mock_capture_with_frames(2, frame_shape=(720, 1280, 3))
+    mock_open_capture.return_value = capture
+    camera_instance = mock_camera_cls.return_value
+
+    pipeline = VideoPipeline()
+    errors = []
+
+    asyncio.run(pipeline.run(on_error=errors.append))
+
+    assert camera_instance.send.call_count == 2
+    sent_frame = camera_instance.send.call_args_list[0][0][0]
+    assert sent_frame.shape == (720, 1280, 3)
 
 
 @patch("fakeptz.video.pyvirtualcam.Camera")

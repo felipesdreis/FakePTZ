@@ -19,6 +19,26 @@ MODE_BUTTON_IDS = {
     CropMode.DIREITA: "btn-direita",
 }
 
+PTZ_BUTTON_ROWS = [
+    [
+        ("btn-pan-minus", "◀ Pan", "nudge_pan", -1),
+        ("btn-pan-plus", "Pan ▶", "nudge_pan", 1),
+    ],
+    [
+        ("btn-tilt-minus", "▲ Tilt", "nudge_tilt", -1),
+        ("btn-tilt-plus", "Tilt ▼", "nudge_tilt", 1),
+    ],
+    [
+        ("btn-zoom-minus", "Zoom −", "nudge_zoom", -1),
+        ("btn-zoom-plus", "Zoom +", "nudge_zoom", 1),
+    ],
+]
+PTZ_BUTTON_ACTIONS = {
+    button_id: (method, direction)
+    for row in PTZ_BUTTON_ROWS
+    for button_id, _, method, direction in row
+}
+
 
 class CropperApp(App):
     # Paleta adaptada de DESIGN-starbucks.md (ver Global Constraints para o
@@ -71,12 +91,29 @@ class CropperApp(App):
         color: white;
         border: round white;
     }
+
+    .ptz-button {
+        background: $card;
+        color: $house-green;
+        border: round $house-green;
+        width: 1fr;
+    }
+
+    .ptz-button:hover {
+        background: #d4e9e2;
+    }
     """
 
     BINDINGS = [
         ("1", "set_mode('ESQUERDA')", "Esquerda"),
         ("2", "set_mode('CENTRO')", "Centro"),
         ("3", "set_mode('DIREITA')", "Direita"),
+        ("left", "nudge_pan(-1)", "Pan -"),
+        ("right", "nudge_pan(1)", "Pan +"),
+        ("up", "nudge_tilt(-1)", "Tilt -"),
+        ("down", "nudge_tilt(1)", "Tilt +"),
+        ("+", "nudge_zoom(1)", "Zoom +"),
+        ("-", "nudge_zoom(-1)", "Zoom -"),
         ("q", "quit", "Sair"),
     ]
 
@@ -96,6 +133,10 @@ class CropperApp(App):
                     id=MODE_BUTTON_IDS[mode],
                     classes="mode-button",
                 )
+        for row in PTZ_BUTTON_ROWS:
+            with Horizontal():
+                for button_id, label, _method, _direction in row:
+                    yield Button(label, id=button_id, classes="ptz-button")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -114,7 +155,27 @@ class CropperApp(App):
         for mode, button_id in MODE_BUTTON_IDS.items():
             if button_id == event.button.id:
                 self.action_set_mode(mode.value)
-                break
+                return
+
+        if event.button.id in PTZ_BUTTON_ACTIONS:
+            method, direction = PTZ_BUTTON_ACTIONS[event.button.id]
+            getattr(self, f"action_{method}")(direction)
+
+    def action_nudge_pan(self, direction: int) -> None:
+        self.pipeline.nudge_pan(direction)
+        self.active_mode = None
+        self._refresh_active_button()
+        self._refresh_status_panel()
+
+    def action_nudge_tilt(self, direction: int) -> None:
+        self.pipeline.nudge_tilt(direction)
+        self.active_mode = None
+        self._refresh_active_button()
+        self._refresh_status_panel()
+
+    def action_nudge_zoom(self, direction: int) -> None:
+        self.pipeline.nudge_zoom(direction)
+        self._refresh_status_panel()
 
     def _handle_pipeline_error(self, message: str) -> None:
         self.exit(message=f"[ERRO] {message}")
@@ -129,8 +190,10 @@ class CropperApp(App):
         # Gold é reservado para o estado "ONLINE" (momento cerimonial, per
         # DESIGN-starbucks.md); erro usa o vermelho semântico do doc.
         status_color = "#cba258" if self.pipeline.status == "ONLINE" else "#c82014"
+        modo_label = self.active_mode.value if self.active_mode else "LIVRE"
         status_panel.update(
             f"STATUS: [bold {status_color}]{self.pipeline.status}[/] "
             f"({self.pipeline.current_fps:.0f} FPS) | "
-            f"MODO ATIVO: [bold #006241]{self.active_mode.value}[/]"
+            f"Z:{self.pipeline.zoom:.1f}x P:{self.pipeline.pan:.0%} T:{self.pipeline.tilt:.0%} | "
+            f"MODO ATIVO: [bold #006241]{modo_label}[/]"
         )
