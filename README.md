@@ -6,7 +6,7 @@ Simulador de câmera PTZ (Pan/Tilt/Zoom) por software: captura sua webcam, recor
 
 - Windows (o driver de câmera virtual usado, Unity Capture, é um filtro DirectShow).
 - Python 3.8+
-- Uma câmera virtual registrada com o nome `virtual_cam_ptz` — veja [`docs/setup-virtual-camera.md`](docs/setup-virtual-camera.md) para o passo a passo de instalação do driver.
+- Uma câmera virtual registrada com o nome `virtual_cam_ptz`, usando o driver Unity Capture já incluído em [`driver-unity-capture.zip`](driver-unity-capture.zip) — veja [`docs/setup-virtual-camera.md`](docs/setup-virtual-camera.md) para o passo a passo de instalação.
 
 ## Instalação
 
@@ -45,6 +45,19 @@ Todos os controles também têm botão correspondente na TUI. Mudanças de enqua
 ```bash
 python -m pytest -q
 ```
+
+## Gerando executável
+
+Para distribuir o FakePTZ em outra máquina Windows sem instalar Python nem as dependências:
+
+```bash
+pip install -r requirements-dev.txt
+pyinstaller --name FakePTZ --console main.py
+```
+
+Isso gera a pasta `dist/FakePTZ/` com `FakePTZ.exe` e as DLLs necessárias — copie a pasta inteira para a máquina de destino e rode o `.exe` de dentro dela.
+
+O executável **não** inclui nem instala o driver de câmera virtual — isso continua sendo um pré-requisito separado em cada máquina de destino, veja [`docs/setup-virtual-camera.md`](docs/setup-virtual-camera.md). A câmera de captura usada também continua fixa no índice 0 (sem opção de escolher outra na TUI/CLI).
 
 ## Estrutura do projeto
 

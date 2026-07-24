@@ -4,3 +4,7 @@ __pycache__/
 venv/
 .venv/
 .worktrees/
+.claude.local.md
+build/
+dist/
+*.spec

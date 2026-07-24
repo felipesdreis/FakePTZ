@@ -13,10 +13,11 @@ O backend **OBS** do `pyvirtualcam` sempre registra o dispositivo com o nome fix
 
 ## Passo a passo
 
-Já deixei o repositório baixado e extraído em `C:\Tools\UnityCapture\` — é um local permanente, então não precisa (e não deve) mover essa pasta depois: `regsvr32` registra o **caminho absoluto** do DLL, e mover/apagar a pasta quebra a câmera depois de instalada.
+O driver já vem pronto no repositório, em [`driver-unity-capture.zip`](../driver-unity-capture.zip) — não precisa baixar nada de terceiros.
 
-1. Abra `C:\Tools\UnityCapture\Install` no Explorer.
-2. Registre o filtro com o nome customizado. Duas formas equivalentes:
+1. Extraia `driver-unity-capture.zip` para uma pasta **permanente** no seu disco (ex.: `C:\Tools\UnityCapture\`). Pode ser qualquer local, mas **não mova nem apague essa pasta depois de instalado**: o `regsvr32` registra o **caminho absoluto** dos DLLs, e mover/apagar a pasta quebra a câmera virtual até você registrar de novo a partir do novo caminho.
+2. Abra a pasta onde extraiu (`UnityCaptureFilter32.dll`, `UnityCaptureFilter64.dll`, `InstallCustomName.bat`, etc. devem estar soltos ali, sem subpasta).
+3. Registre o filtro com o nome customizado. Duas formas equivalentes:
 
    **Opção A — clique duplo:**
    - Clique com o botão direito em `InstallCustomName.bat` → "Executar como administrador".
@@ -29,7 +30,7 @@ Já deixei o repositório baixado e extraído em `C:\Tools\UnityCapture\` — é
 
    **Opção B — terminal elevado (evita digitação manual/erro de digitação):**
    - Abra um Prompt de Comando ou PowerShell como Administrador.
-   - `cd C:\Tools\UnityCapture\Install`
+   - `cd` até a pasta onde extraiu o driver (ex.: `cd C:\Tools\UnityCapture`).
    - Rode:
      ```
      regsvr32 "UnityCaptureFilter32.dll" "/i:UnityCaptureName=virtual_cam_ptz"
@@ -43,7 +44,7 @@ Já deixei o repositório baixado e extraído em `C:\Tools\UnityCapture\` — é
 
 ## Desinstalar
 
-Na mesma pasta `Install`, rode `Uninstall.bat` como Administrador (ou `regsvr32 /u` nos dois DLLs) para remover o filtro do sistema.
+Na mesma pasta onde extraiu o driver, rode `Uninstall.bat` como Administrador (ou `regsvr32 /u` nos dois DLLs) para remover o filtro do sistema.
 
 ## Observação
 
