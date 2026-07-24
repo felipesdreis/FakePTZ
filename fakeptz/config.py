@@ -29,6 +29,9 @@ MODE_PAN_TILT = {
     CropMode.DIREITA: (1.0, 0.5),
 }
 
+MACRO_SLOTS = ("M1", "M2", "M3")
+DEFAULT_MACRO_POSITION = (0.5, 0.5, 1.0)  # pan, tilt, zoom — mesmo neutro do CENTRO
+
 
 def crop_coords_for(
     width: int, height: int, zoom: float = 1.0, pan: float = 0.5, tilt: float = 0.5

@@ -16,10 +16,20 @@ class FakePipeline:
         self.nudge_pan_calls = []
         self.nudge_tilt_calls = []
         self.nudge_zoom_calls = []
+        self.set_target_calls = []
 
     def set_mode(self, mode):
         self.mode = mode
         self.set_mode_calls.append(mode)
+
+    def set_target(self, *, zoom=None, pan=None, tilt=None):
+        self.set_target_calls.append({"zoom": zoom, "pan": pan, "tilt": tilt})
+        if zoom is not None:
+            self.zoom = zoom
+        if pan is not None:
+            self.pan = pan
+        if tilt is not None:
+            self.tilt = tilt
 
     def nudge_pan(self, direction):
         self.nudge_pan_calls.append(direction)

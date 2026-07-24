@@ -4,7 +4,8 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Button, Footer, Header, Static
 
-from fakeptz.config import CropMode
+from fakeptz import macros
+from fakeptz.config import CropMode, MACRO_SLOTS
 from fakeptz.video import VideoPipeline
 
 MODE_LABELS = {
@@ -18,6 +19,20 @@ MODE_BUTTON_IDS = {
     CropMode.CENTRO: "btn-centro",
     CropMode.DIREITA: "btn-direita",
 }
+
+MACRO_BUTTON_IDS = {
+    "M1": "btn-macro-1",
+    "M2": "btn-macro-2",
+    "M3": "btn-macro-3",
+}
+
+MACRO_LABELS = {
+    "M1": "4 - M1",
+    "M2": "5 - M2",
+    "M3": "6 - M3",
+}
+
+SAVE_BUTTON_ID = "btn-save-macro"
 
 PTZ_BUTTON_ROWS = [
     [
@@ -102,12 +117,34 @@ class CropperApp(App):
     .ptz-button:hover {
         background: #d4e9e2;
     }
+
+    .save-button {
+        background: $card;
+        color: $error-red;
+        border: round $error-red;
+        width: 1fr;
+        text-style: bold;
+    }
+
+    .save-button:hover {
+        background: #f6dcd9;
+    }
+
+    .save-button.armed {
+        background: $error-red;
+        color: white;
+        border: round white;
+    }
     """
 
     BINDINGS = [
         ("1", "set_mode('ESQUERDA')", "Esquerda"),
         ("2", "set_mode('CENTRO')", "Centro"),
         ("3", "set_mode('DIREITA')", "Direita"),
+        ("4", "recall_or_save_macro('M1')", "Macro 1"),
+        ("5", "recall_or_save_macro('M2')", "Macro 2"),
+        ("6", "recall_or_save_macro('M3')", "Macro 3"),
+        ("s", "toggle_save_armed", "Salvar"),
         ("left", "nudge_pan(-1)", "Pan -"),
         ("right", "nudge_pan(1)", "Pan +"),
         ("up", "nudge_tilt(-1)", "Tilt -"),
@@ -122,6 +159,8 @@ class CropperApp(App):
         self.title = "CROPPER VIRTUAL TUI"
         self.pipeline = pipeline or VideoPipeline()
         self.active_mode = self.pipeline.mode
+        self.macros = macros.load_macros()
+        self._save_armed = False
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -133,6 +172,14 @@ class CropperApp(App):
                     id=MODE_BUTTON_IDS[mode],
                     classes="mode-button",
                 )
+        with Horizontal():
+            for slot in MACRO_SLOTS:
+                yield Button(
+                    MACRO_LABELS[slot],
+                    id=MACRO_BUTTON_IDS[slot],
+                    classes="mode-button",
+                )
+            yield Button("S - SALVAR", id=SAVE_BUTTON_ID, classes="save-button")
         for row in PTZ_BUTTON_ROWS:
             with Horizontal():
                 for button_id, label, _method, _direction in row:
@@ -157,9 +204,35 @@ class CropperApp(App):
                 self.action_set_mode(mode.value)
                 return
 
+        for slot, button_id in MACRO_BUTTON_IDS.items():
+            if button_id == event.button.id:
+                self.action_recall_or_save_macro(slot)
+                return
+
+        if event.button.id == SAVE_BUTTON_ID:
+            self.action_toggle_save_armed()
+            return
+
         if event.button.id in PTZ_BUTTON_ACTIONS:
             method, direction = PTZ_BUTTON_ACTIONS[event.button.id]
             getattr(self, f"action_{method}")(direction)
+
+    def action_toggle_save_armed(self) -> None:
+        self._save_armed = not self._save_armed
+        self._refresh_save_button()
+
+    def action_recall_or_save_macro(self, slot: str) -> None:
+        if self._save_armed:
+            macros.save_macro(slot, self.pipeline.pan, self.pipeline.tilt, self.pipeline.zoom)
+            self.macros[slot] = (self.pipeline.pan, self.pipeline.tilt, self.pipeline.zoom)
+            self._save_armed = False
+            self._refresh_save_button()
+        else:
+            pan, tilt, zoom = self.macros[slot]
+            self.pipeline.set_target(zoom=zoom, pan=pan, tilt=tilt)
+            self.active_mode = None
+            self._refresh_active_button()
+            self._refresh_status_panel()
 
     def action_nudge_pan(self, direction: int) -> None:
         self.pipeline.nudge_pan(direction)
@@ -184,6 +257,10 @@ class CropperApp(App):
         for mode, button_id in MODE_BUTTON_IDS.items():
             button = self.query_one(f"#{button_id}", Button)
             button.set_class(mode == self.active_mode, "active")
+
+    def _refresh_save_button(self) -> None:
+        button = self.query_one(f"#{SAVE_BUTTON_ID}", Button)
+        button.set_class(self._save_armed, "armed")
 
     def _refresh_status_panel(self) -> None:
         status_panel = self.query_one("#status-panel", Static)
