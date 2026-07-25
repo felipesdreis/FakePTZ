@@ -71,8 +71,3 @@ docs/         # documentação complementar (setup da câmera virtual, roadmap)
 main.py       # ponto de entrada
 ```
 
-## Documentação adicional
-
-- [`docs/setup-virtual-camera.md`](docs/setup-virtual-camera.md) — instalação e registro do driver de câmera virtual.
-- [`docs/plano-de-evolucao-ptz.md`](docs/plano-de-evolucao-ptz.md) — roadmap de evolução (PTZ real, presets, face tracking).
-- [`Especificação Técnica (SRS_SDD).md`](<Especificação Técnica (SRS_SDD).md>) — requisitos funcionais e não-funcionais do projeto.
