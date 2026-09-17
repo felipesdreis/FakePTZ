@@ -1,0 +1,2 @@
+static.region=Region(x=4, y=2, width=40, height=3) card.region=Region(x=0, y=0, width=48, height=7)
+static.content='Esta e uma frase bem longa sem quebras de linha que deveria quebrar sozinha quando o width for limitado'

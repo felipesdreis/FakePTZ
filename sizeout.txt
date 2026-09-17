@@ -1,0 +1,4 @@
+size=(80,24) static.region=Region(x=36, y=10, width=0, height=0) card.region=Region(x=32, y=8, width=8, height=4) content_len=606
+size=(60,20) static.region=Region(x=26, y=8, width=0, height=0) card.region=Region(x=22, y=6, width=8, height=4) content_len=606
+size=(40,15) static.region=Region(x=16, y=6, width=0, height=0) card.region=Region(x=12, y=4, width=8, height=4) content_len=606
+size=(30,10) static.region=Region(x=11, y=3, width=0, height=0) card.region=Region(x=7, y=1, width=8, height=4) content_len=606

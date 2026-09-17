@@ -1,0 +1,5 @@
+grid.region=Region(x=26, y=9, width=27, height=9)
+btn-tilt-minus.region=Region(x=35, y=9, width=9, height=3)
+btn-pan-minus.region=Region(x=26, y=12, width=9, height=3)
+btn-pan-plus.region=Region(x=44, y=12, width=9, height=3)
+btn-tilt-plus.region=Region(x=35, y=15, width=9, height=3)
