@@ -32,6 +32,8 @@ MODE_PAN_TILT = {
 MACRO_SLOTS = ("M1", "M2", "M3")
 DEFAULT_MACRO_POSITION = (0.5, 0.5, 1.0)  # pan, tilt, zoom — mesmo neutro do CENTRO
 
+REMOTE_HTTP_PORT = 8642
+
 
 def crop_coords_for(
     width: int, height: int, zoom: float = 1.0, pan: float = 0.5, tilt: float = 0.5

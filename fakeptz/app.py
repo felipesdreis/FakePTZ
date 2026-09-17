@@ -1,11 +1,13 @@
 from typing import Optional
 
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Center, Grid, Horizontal, Vertical
+from textual.screen import ModalScreen
 from textual.widgets import Button, Footer, Header, Static
 
 from fakeptz import macros
 from fakeptz.config import CropMode, MACRO_SLOTS
+from fakeptz.remote import RemoteServer, build_qr_ascii
 from fakeptz.video import VideoPipeline
 
 MODE_LABELS = {
@@ -34,25 +36,73 @@ MACRO_LABELS = {
 
 SAVE_BUTTON_ID = "btn-save-macro"
 
-PTZ_BUTTON_ROWS = [
-    [
-        ("btn-pan-minus", "◀ Pan", "nudge_pan", -1),
-        ("btn-pan-plus", "Pan ▶", "nudge_pan", 1),
-    ],
-    [
-        ("btn-tilt-minus", "▲ Tilt", "nudge_tilt", -1),
-        ("btn-tilt-plus", "Tilt ▼", "nudge_tilt", 1),
-    ],
-    [
-        ("btn-zoom-minus", "Zoom −", "nudge_zoom", -1),
-        ("btn-zoom-plus", "Zoom +", "nudge_zoom", 1),
-    ],
+PAN_ROW = [
+    ("btn-pan-minus", "◀", "nudge_pan", -1),
+    ("btn-pan-plus", "▶", "nudge_pan", 1),
 ]
+TILT_ROW = [
+    ("btn-tilt-minus", "▲", "nudge_tilt", -1),
+    ("btn-tilt-plus", "▼", "nudge_tilt", 1),
+]
+ZOOM_ROW = [
+    ("btn-zoom-minus", "Zoom −", "nudge_zoom", -1),
+    ("btn-zoom-plus", "Zoom +", "nudge_zoom", 1),
+]
+PTZ_BUTTON_ROWS = [PAN_ROW, TILT_ROW, ZOOM_ROW]
 PTZ_BUTTON_ACTIONS = {
     button_id: (method, direction)
     for row in PTZ_BUTTON_ROWS
     for button_id, _, method, direction in row
 }
+
+REMOTE_QR_BUTTON_ID = "btn-remote-qr"
+
+
+class RemoteQRScreen(ModalScreen):
+    CSS = """
+    RemoteQRScreen {
+        align: center middle;
+    }
+
+    #remote-qr-card {
+        background: #ffffff;
+        border: round #006241;
+        padding: 1 3;
+        width: auto;
+        height: auto;
+        max-height: 100%;
+        overflow-y: auto;
+    }
+
+    #remote-qr-art {
+        width: auto;
+        max-width: 60;
+        height: auto;
+        color: black;
+        margin-bottom: 1;
+    }
+    """
+
+    BINDINGS = [("escape", "dismiss", "Fechar")]
+
+    def __init__(self, url: str, ascii_art: str):
+        super().__init__()
+        self._url = url
+        self._ascii_art = ascii_art
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="remote-qr-card"):
+            yield Static(
+                f"{self._ascii_art}\n\n{self._url}\n\n"
+                "Firewall do Windows pode pedir permissão — clique em Permitir.\n"
+                "Desative a VPN se o celular não conectar.",
+                id="remote-qr-art",
+            )
+        yield Button("Fechar (ESC)", id="btn-close-remote-qr")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-close-remote-qr":
+            self.dismiss()
 
 
 class CropperApp(App):
@@ -118,6 +168,29 @@ class CropperApp(App):
         background: #d4e9e2;
     }
 
+    #dpad {
+        grid-size: 3 3;
+        grid-gutter: 0;
+        width: 27;
+        height: 9;
+    }
+
+    .dpad-btn {
+        width: 100%;
+        height: 100%;
+    }
+
+    .dpad-empty {
+        background: $canvas;
+    }
+
+    .dpad-hub {
+        background: $card;
+        color: $house-green;
+        content-align: center middle;
+        border: round $house-green;
+    }
+
     .save-button {
         background: $card;
         color: $error-red;
@@ -152,6 +225,7 @@ class CropperApp(App):
         ("+", "nudge_zoom(1)", "Zoom +"),
         ("-", "nudge_zoom(-1)", "Zoom -"),
         ("q", "quit", "Sair"),
+        ("r", "show_remote_qr", "QR Remoto"),
     ]
 
     def __init__(self, pipeline: Optional[VideoPipeline] = None):
@@ -161,6 +235,7 @@ class CropperApp(App):
         self.active_mode = self.pipeline.mode
         self.macros = macros.load_macros()
         self._save_armed = False
+        self._remote_server: Optional[RemoteServer] = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -180,10 +255,22 @@ class CropperApp(App):
                     classes="mode-button",
                 )
             yield Button("S - SALVAR", id=SAVE_BUTTON_ID, classes="save-button")
-        for row in PTZ_BUTTON_ROWS:
-            with Horizontal():
-                for button_id, label, _method, _direction in row:
-                    yield Button(label, id=button_id, classes="ptz-button")
+        with Center():
+            with Grid(id="dpad"):
+                yield Static(classes="dpad-empty")
+                yield Button(TILT_ROW[0][1], id=TILT_ROW[0][0], classes="ptz-button dpad-btn")
+                yield Static(classes="dpad-empty")
+                yield Button(PAN_ROW[0][1], id=PAN_ROW[0][0], classes="ptz-button dpad-btn")
+                yield Static("●", classes="dpad-hub")
+                yield Button(PAN_ROW[1][1], id=PAN_ROW[1][0], classes="ptz-button dpad-btn")
+                yield Static(classes="dpad-empty")
+                yield Button(TILT_ROW[1][1], id=TILT_ROW[1][0], classes="ptz-button dpad-btn")
+                yield Static(classes="dpad-empty")
+        with Horizontal():
+            for button_id, label, _method, _direction in ZOOM_ROW:
+                yield Button(label, id=button_id, classes="ptz-button")
+        with Horizontal():
+            yield Button("R - QR REMOTO", id=REMOTE_QR_BUTTON_ID, classes="ptz-button")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -191,6 +278,10 @@ class CropperApp(App):
         self._refresh_status_panel()
         self.run_worker(self.pipeline.run(self._handle_pipeline_error), exclusive=True)
         self.set_interval(0.5, self._refresh_status_panel)
+
+    def on_unmount(self) -> None:
+        if self._remote_server is not None:
+            self._remote_server.stop()
 
     def action_set_mode(self, mode_value: str) -> None:
         self.active_mode = CropMode(mode_value)
@@ -216,6 +307,10 @@ class CropperApp(App):
         if event.button.id in PTZ_BUTTON_ACTIONS:
             method, direction = PTZ_BUTTON_ACTIONS[event.button.id]
             getattr(self, f"action_{method}")(direction)
+            return
+
+        if event.button.id == REMOTE_QR_BUTTON_ID:
+            self.action_show_remote_qr()
 
     def action_toggle_save_armed(self) -> None:
         self._save_armed = not self._save_armed
@@ -249,6 +344,16 @@ class CropperApp(App):
     def action_nudge_zoom(self, direction: int) -> None:
         self.pipeline.nudge_zoom(direction)
         self._refresh_status_panel()
+
+    def action_show_remote_qr(self) -> None:
+        if self._remote_server is None:
+            self._remote_server = RemoteServer(self)
+        try:
+            url = self._remote_server.start()
+        except OSError as exc:
+            self.notify(f"Não foi possível iniciar o servidor remoto: {exc}", severity="error")
+            return
+        self.push_screen(RemoteQRScreen(url, build_qr_ascii(url)))
 
     def _handle_pipeline_error(self, message: str) -> None:
         self.exit(message=f"[ERRO] {message}")
